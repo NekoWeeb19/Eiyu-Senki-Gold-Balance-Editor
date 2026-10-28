@@ -17,7 +17,7 @@ Tested against Steam v1.03c1 of *Eiyu\*Senki Gold* (Eiyuu\*Senki GOLD: A New Con
 
 - **Python 3** (3.10 or newer recommended; any current version from python.org is fine). On Windows, tick **"Add python.exe to PATH"** in the installer. If `python` opens the Microsoft Store, use `py` instead.
 - A modern browser (Chrome/Edge 90+, Firefox 88+, Safari 16.4+).
-- The two game files: `Define.dat` (in `AUGGame`) and `BattleSet.dat` (in `AUGGame`).
+- The two game files: `Define.dat` and `BattleSet.dat` in `\AUGGame`.
 
 ## Quick walkthrough
 
