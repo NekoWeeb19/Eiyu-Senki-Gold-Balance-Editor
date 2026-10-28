@@ -12,6 +12,7 @@ Tested against Steam v1.03c1 of *Eiyu\*Senki Gold* (Eiyuu\*Senki GOLD: A New Con
 |---|---|
 | `rpack.py` | Command-line tool that unpacks a game `.dat` into plain text files and packs them back. |
 | `define_editor.html` | Offline editor you open in a browser. Nothing is uploaded anywhere. |
+| `main.txt` | Single line text file needed for `episode.dat` |
 
 ## What you need
 
