@@ -141,6 +141,25 @@ const cityEn=id=>en("spot",id),factionEn=id=>en("country",id);
 function catEn(id){const b=byId("techkind",id);if(!b||!b.name)return"";return b.name+(b.elem&&ELEM[b.elem]?" · "+ELEM[b.elem]:"");}
 const enCol=(label,get,lookup)=>({label,sortv:it=>(lookup(get(it))||get(it)||""),render:it=>{const j=get(it),e=lookup(j);return`<td>${esc(e||j||"—")}${e&&j?`<small>${esc(j)}</small>`:""}</td>`;}});
 const enOpt=(lookup)=>v=>{const e=lookup(v);return e&&e!==v?e+" ("+v+")":v;};
+
+const FW="０１２３４５";
+function effFields(b,copyOf){
+  const strict=[],re=/(\r?\n)([ \t]*,[ \t]*効果([１-５]?)=@戦闘状態\(id=State\(")([^"]*)("\)\))/g;let m;
+  while((m=re.exec(b.block)))strict.push({n:m[3]?FW.indexOf(m[3]):1,numbered:!!m[3],s:b.base+m.index,e:b.base+m.index+m[0].length,pre:m[1]+m[2],post:m[5],id:m[4]});
+  const loose=(b.block.match(/効果[１２３４５]?=@戦闘状態/g)||[]).length;
+  const o={eff1:[],eff2:[],eff3:[],effx:[]};
+  if(loose!==strict.length){ // unusual layout: plain editing only, no add/remove
+    const l=all(b,PRE+'効果[１２３４５]?=@戦闘状態\\(id=State\\("([^"]*)"\\)\\)',"state");l.forEach((f,i)=>(i<3?o["eff"+(i+1)]:o.effx).push(f));return o;}
+  const group=[];
+  const mk=(x)=>{const f={start:x.s,end:x.e,orig:x.id,val:x.id,type:"effslot",pre:x.pre,post:x.post,order:x.n,group};group.push(f);return f;};
+  for(const x of strict){const f=mk(x);if(!x.numbered)f.plain=true;(x.n<=3?o["eff"+x.n]:o.effx).push(f);}
+  const last=strict[strict.length-1];
+  if(last&&!copyOf&&(last.numbered||strict.length===1)){
+    for(let n=1;n<=3;n++)if(!strict.some(x=>x.n===n)){
+      const f={start:last.e,end:last.e,orig:"",val:"",type:"effslot",pre:last.pre.replace(/効果[１-５]?=/,"効果"+FW[n]+"="),post:last.post,order:n,group};group.push(f);o["eff"+n].push(f);}
+  }
+  return o;
+}
 /* ---------- file-type specs ---------- */
 const SPECS={
   unit:{label:"Units",noun:"units",re:'^unit id="([^"]*)"',
@@ -165,10 +184,10 @@ const SPECS={
     filters:[{label:"Owner",get:it=>it.faction,show:v=>enOpt(factionEn)(v)}],search:it=>it.id+" "+cityEn(it.id)+" "+it.faction+" "+factionEn(it.faction)},
   item:{label:"Items",noun:"items",re:'^item id="([^"]*)"',
     parse:b=>({name:str(b,'名前="([^"]*)"'),copyOf:str(b,'^item id="[^"]*", 元="([^"]*)"'),
-      f:{price:one(b,PRE+"価格=(\\d+)","int"),eff:all(b,PRE+'効果[１２３４５]?=@戦闘状態\\(id=State\\("([^"]*)"\\)\\)',"state"),
+      f:{price:one(b,PRE+"価格=(\\d+)","int"),...effFields(b,str(b,'^item id="[^"]*", 元="([^"]*)"')),
          brief:one(b,PRE+'概略="([^"]*)"',"text"),desc:one(b,PRE+'説明="([^"]*)"',"text")}}),
     cols:[{label:"Item",sortv:it=>(itemName(it)||"").toLowerCase(),render:it=>`<td class="name"><b>${esc(itemName(it)||it.id)}</b><small>${esc(it.id)}${it.copyOf?" · copy of "+esc(it.copyOf):""}</small></td>`},
-      NUM("price","Price"),{label:"Effects (state ids)",key:"eff",kind:"f",wide:true},TXT("brief","Summary text",true),TXT("desc","Description text",true)],
+      NUM("price","Price"),{label:"Effect 1",key:"eff1",kind:"f",wide:true},{label:"Effect 2",key:"eff2",kind:"f",wide:true},{label:"Effect 3",key:"eff3",kind:"f",wide:true},{label:"Effects 4–5 (rare)",key:"effx",kind:"f",wide:true},TXT("brief","Summary text",true),TXT("desc","Description text",true)],
     filters:[{label:"Kind",get:it=>it.copyOf?"copies":"originals"}],search:it=>it.id+" "+itemName(it)},
   itemmix:{label:"Crafting",noun:"recipes",re:'^itemmix id1="([^"]*)", id2="([^"]*)"',
     parse:b=>({name:str(b,'mixed="([^"]*)"'),a:str(b,'id1="([^"]*)"'),b:str(b,'id2="([^"]*)"'),f:{cost:one(b,PRE+"資金=(-?\\d+)","int")}}),
@@ -300,20 +319,26 @@ function valid(f){
   if(f.type==="float")return/^-?\d+(\.\d+)?$/.test(v);
   if(f.type==="addv")return/^-?\d+(\.\d+)?%?$/.test(v);
   if(f.type==="elem")return v in ELEM;
+  if(f.type==="effslot"){
+    if(/["\r\n]/.test(f.val))return false;
+    if(v==="")return f.group.some(g=>g!==f&&g.val.trim()!=="");
+    return!files.state||!!byId("state",v);}
   if(f.type==="state")return!/["\r\n]/.test(f.val)&&v!=="";
   return!/["\r\n]/.test(f.val);
 }
 function out(f){
+  if(f.type==="effslot"){const v=f.val.trim();return v===""?"":(promoted(f)?f.pre.replace("効果=","効果１="):f.pre)+v+f.post;}
   if(f.type==="text"||f.type==="state")return f.val;
   let v=f.val.trim();
   if(f.type==="float"&&!v.includes("."))v+=".0";
   return v;
 }
-const changed=f=>f.val!==f.orig&&out(f)!==f.orig;
+const promoted=f=>!!f.plain&&f.group.some(g=>g!==f&&g.orig===""&&g.val.trim()!=="");
+const changed=f=>f.type==="effslot"?(f.val!==f.orig||(f.val.trim()!==""&&promoted(f))):f.val!==f.orig&&out(f)!==f.orig;
 function allFields(kind){const a=[];for(const it of files[kind].items)for(const k in it.f)it.f[k].forEach((f,j)=>a.push({it,k,j,f}));return a;}
 function exportText(kind,pi){
   const F=files[kind];let t=pi===undefined?F.text:F.parts[pi].text;
-  for(const x of allFields(kind).filter(x=>changed(x.f)&&(pi===undefined||x.it.part===pi)).sort((a,b)=>b.f.start-a.f.start))t=t.slice(0,x.f.start)+out(x.f)+t.slice(x.f.end);
+  for(const x of allFields(kind).filter(x=>changed(x.f)&&(pi===undefined||x.it.part===pi)).sort((a,b)=>(b.f.start-a.f.start)||((b.f.order||0)-(a.f.order||0))))t=t.slice(0,x.f.start)+out(x.f)+t.slice(x.f.end);
   return t;
 }
 
@@ -335,6 +360,7 @@ function chips(key,val){
   if(key==="skills"){const nm=techNames();return val.split(",").filter(s=>s.trim()).map(id=>{id=id.trim();return nm[id]?`<span class="chip">${esc(nm[id])}</span>`:`<span class="chip unk" title="no such skill id in tech.txt">? ${esc(id)}</span>`;}).join("");}
   if(key==="equip")return val.split(",").filter(s=>s.trim()).map(id=>{id=id.trim();const e=itemEn(id);return e?`<span class="chip">${esc(e)}</span>`:`<span class="chip unk" title="no such item id in item.txt">? ${esc(id)}</span>`;}).join("");
   if(key==="mapsk")return val.split(",").filter(s=>s.trim()).map(x=>{const[id,lv]=x.trim().split(":");const e=en("skill",id);return e?`<span class="chip">${esc(e)}${lv!==undefined?": "+esc(lv):""}</span>`:`<span class="chip unk" title="no such map skill in skill.txt">? ${esc(x)}</span>`;}).join("");
+  if(val.trim()==="")return"";
   const d=stateInfo(val.trim());
   return d!==null?`<span class="chip">${esc(d)}</span>`:`<span class="chip unk" title="no such state id in battlestate.txt">? ${esc(val)}</span>`;
 }
@@ -350,7 +376,7 @@ function cellHTML(kind,it,i,col){
     const cls=(changed(f)?" chg":"")+(valid(f)?"":" bad");
     const at=`data-i="${i}" data-k="${col.key}" data-j="${j}" title="original: ${esc(f.orig)}"`;
     if(f.type==="elem")return`<select ${at} class="${cls}">${Object.keys(ELEM).map(e=>`<option value="${e}"${f.val===e?" selected":""}>${e} ${ELEM[e]}</option>`).join("")}</select>`;
-    if(f.type==="state"){const live=files.state?`<div class="chips" data-chip>${chips("eff",f.val)}</div>`:"";return`<div class="effrow"><input class="t${cls}" ${at} value="${esc(f.val)}">${live}</div>`;}
+    if(f.type==="state"||f.type==="effslot"){const live=files.state?`<div class="chips" data-chip>${chips("eff",f.val)}</div>`:"";return`<div class="effrow"><input class="t${cls}" ${at} value="${esc(f.val)}"${f.type==="effslot"&&f.orig===""?' placeholder="(empty – type a state id to add)"':f.type==="effslot"?' placeholder="(empty = remove this effect)"':""}>${live}</div>`;}
     if(f.type==="text")return`<input class="t${cls}" ${at} value="${esc(f.val)}">`;
     return`<input class="${col.key==="mult"?"f":"n"}${cls}" ${at} value="${esc(f.val)}" inputmode="decimal">`;
   }).join(" ");
@@ -427,8 +453,9 @@ $("#tbody").addEventListener("input",e=>{
   const kind=ui.tab,it=files[kind].items[+t.dataset.i],f=it.f[t.dataset.k][+t.dataset.j];
   f.val=t.value;
   t.classList.toggle("chg",changed(f));t.classList.toggle("bad",!valid(f));
-  if(f.type==="state"){const c=t.parentElement.querySelector("[data-chip]");if(c)c.innerHTML=chips("eff",f.val);}
+  if(f.type==="state"||f.type==="effslot"){const c=t.parentElement.querySelector("[data-chip]");if(c)c.innerHTML=chips("eff",f.val);}
   else if(["skills","mapsk","equip"].includes(t.dataset.k)||it.vt==="reward"){const c=t.closest("td").querySelector("[data-chip]");if(c)c.innerHTML=chips(it.vt==="reward"?"equip":t.dataset.k,f.val);}
+  if(f.type==="effslot")t.closest("tr").querySelectorAll("input[data-k^=eff]").forEach(inp=>{const g=it.f[inp.dataset.k][+inp.dataset.j];inp.classList.toggle("bad",!valid(g));inp.classList.toggle("chg",changed(g));});
   saveDraft(kind);renderStatus();
 });
 $("#tbody").addEventListener("click",e=>{
@@ -504,7 +531,7 @@ $("#btn-changes").onclick=()=>{
   for(const k of KINDS){if(!files[k])continue;
     const ch=allFields(k).filter(x=>changed(x.f));
     h+=`<h3 style="margin:12px 0 6px">${esc(files[k].name)} <span class="pill">${ch.length}</span></h3>`;
-    h+=ch.length?"<table><tbody>"+ch.map(x=>`<tr><td><b>${esc(x.it.label||x.it.name||x.it.id)}</b><small>${esc(x.it.file||x.it.id)}</small></td><td>${esc(x.k)}${x.j?" #"+(x.j+1):""}</td><td>${esc(x.f.orig)} → <b>${esc(out(x.f))}</b></td></tr>`).join("")+"</tbody></table>":'<div class="note">No changes.</div>';}
+    h+=ch.length?"<table><tbody>"+ch.map(x=>`<tr><td><b>${esc(x.it.label||x.it.name||x.it.id)}</b><small>${esc(x.it.file||x.it.id)}</small></td><td>${esc(x.k)}${x.j?" #"+(x.j+1):""}</td><td>${esc(x.f.orig||"(none)")} → <b>${esc(x.f.type==="effslot"?(x.f.val.trim()||"(removed)"):out(x.f))}</b></td></tr>`).join("")+"</tbody></table>":'<div class="note">No changes.</div>';}
   $("#dlg-body").innerHTML=h;$("#dlg").showModal();
 };
 $("#dlg-close").onclick=()=>$("#dlg").close();
