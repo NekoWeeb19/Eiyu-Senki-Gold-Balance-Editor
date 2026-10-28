@@ -1,4 +1,4 @@
-# Eiyu Senki Gold balance modding toolkit
+# Eiyu*Senki Gold Balance Editor
 
 Unpack the game's data files, edit units / skills / income / items / enemy battles in a simple web page, and pack them back so the game loads them.
 
@@ -15,11 +15,11 @@ Tested against Steam v1.03c1 of *Eiyu Senki Gold* (Eiyuu\*Senki GOLD: A New Conq
 
 - **Python 3** (3.10 or newer recommended; any current version from python.org is fine). On Windows, tick **"Add python.exe to PATH"** in the installer. If `python` opens the Microsoft Store, use `py` instead.
 - A modern browser (Chrome/Edge 90+, Firefox 88+, Safari 16.4+).
-- The two game files: `Define.dat` (in `AUGGame\Define`) and `BattleSet.dat` (in `AUGGame`).
+- The two game files: `Define.dat` (in `AUGGame`) and `BattleSet.dat` (in `AUGGame`).
 
 ## Quick walkthrough
 
-### 0. Back up
+### 0. Back up the originals
 Copy the original `Define.dat` and `BattleSet.dat` to a safe folder the game never touches. If anything goes wrong, put them back.
 
 ### 1. Set up a work folder
@@ -44,10 +44,10 @@ Expected output: `extracted 63 files` for the first and `extracted 19 files` for
 4. **Review changes** shows every edit as old → new.
 
 ### 4. Save edits back to the folders
-- Define files: **Download unit.txt** (etc.) or **Download all edited**, saved into `define_txt` and replacing the old file.
-- Battle files: **Download edited battle files (.zip)** on the Battles tab, unzipped into `battleset_txt` and replacing the old files.
+- Define files: **Download unit.txt** (etc.) or **Download all edited**, saved into `define_txt` and replace the old file(s).
+- Battle files: **Download edited battle files (.zip)** on the Battles tab, unzipped into `battleset_txt` and replace the old file(s).
 
-### 5. Pack
+### 5. Repack
 ```
 python rpack.py repack Define.dat define_txt Define_new.dat
 python rpack.py repack BattleSet.dat battleset_txt BattleSet_new.dat --hints define_txt\team.txt
