@@ -69,12 +69,16 @@ Close the game. Rename the originals in the game folder (e.g. `Define.dat.bak`),
 | Tab | Editable | Not editable |
 |---|---|---|
 | Units (101) | Element, Troops, ATK, DEF, SPD, skill list, map skills | Names, Faction, LCK/Heal (in `unitmodel.txt`), Traits |
-| Skills (428) | Level, Brave cost, WT (charge), DLY (delay), Mult (damage/heal multiplier), Hits, Crit, Fixed damage | Names, Descriptions, Ranges, AI Weights, Extra Effects |
+| Skills (428) | Level, Brave cost, WT (charge), DLY (delay), Mult (damage/heal multiplier), Hits, Crit, Fixed damage, who it hits (Enemy/Friend/All/None/UnExist), aim-range grid and hit-area grid (click squares) | Names, Descriptions, AI Weights, Extra Effects, grid size (rows/columns) |
 | Cities (151) | Funds (income), Walls | Owner, Mames |
-| Items (225) | Price, Effect Slots (buff ids), Summary and description text | Names, Images (copies inherit from their original) |
+| Items (225) | Price, up to 3 effect slots (buff ids; clear a slot to remove that effect, fill an empty slot to add one, at least one must remain), Summary and description text | Names, Images (copies inherit from their original) |
 | Crafting (73) | Recipe cost | Ingredients and results |
 | Buffs/States (348) | Value (`add=`), Description text | Effect type, Conditions |
-| Battles (2,672 enemy units in 420 battles + 118 teams) | Troops, ATK, DEF, SPD, LCK, Element, skills, equipment, trait | Formations, Drops, Turn Limits, Models, Names |
+| Battles (2,672 enemy units in 420 battles + 118 teams) | Troops, ATK, DEF, SPD, LCK, Element, skills, equipment, trait, unit AI (existing entries) | Formations, Drops, Turn Limits, Models, Names |
+| Models (LCK/Heal) (372, `unitmodel.txt`) | LCK (運) and Heal/Recovery (治) per model. **What Heal does is unknown as of this editor version, so change it with caution.** Models without a 治 value use the default of 10; typing a different number adds it. Each row shows which named units and how many battle units use the model | Names, sprites, element, default skills, AI. Editing a model changes every unit that uses it |
+| Element Chart (9×9, `attributetable.txt`) | Damage % for each attacker element against each defender element (100% normal, 200% weakness). Row = attacker, column = defender is my reading of the file | Adding or removing elements. Values other than 100/200 are untested |
+| Battle Settings (one row per battle/team) | Drop item (can also be added to a battle that has none; untested), party size, decisive-battle flag, turn limit text, can retreat / can lose flags, troop mode (`兵力`, e.g. `相対`) | Formations (the ★ meaning is unknown), map, country, battle type |
+| AI (Experimental, 30 weight rows) | The numeric weights enemy AIs use to choose targets and skills (target weight, hate, front/mid/back row, elemental advantage, max/current troops …), per AI personality | Which units use which AI, adding new weights. English labels are guesses; effects on battles untested |
 | Rewards & Raids (220 values, from `Episode.dat`) | Mission gold rewards, item rewards (item id), raid trigger turns per difficulty mode (0 to 3), gold lost on a failed raid (% of funds), shop sell-back rate, story-battle troop multipliers | Story dialogue, mission order and conditions, which battle a raid starts |
 
 **It can't add or delete entries or rename ids.**
@@ -92,12 +96,11 @@ Tools on every tab: search, filters, sortable columns, **Bulk edit** (×, + or =
 ## How the game uses these files (useful for deciding what to edit)
 
 - **Named characters**, including named enemy leaders such as Pandora, are in `unit.txt`. Enemies in battles can say `ベース="<unit id>"` to inherit a named unit's stats and then override only some fields.
-- **Generic enemies** (soldiers, bandits) are defined inline per battle in the BattleSet files, with their own troops and stats. Their appearance, element, LCK and heal come from a model in `unitmodel.txt` (372 models).
+- **Generic enemies** (soldiers, bandits) are defined inline per battle in the BattleSet files, with their own troops and stats. Their appearance, element, LCK and heal come from a model in `unitmodel.txt` (372 models); a battle line that sets `運=` overrides the model's LCK (387 of 2,677 battle units do).
 - A battle header with `兵力="相対"` scales enemy troops relative to something about your army (not set in any script or data file I could find, so it is probably computed by the game). In one test the factor was about ×4.8 on every unit. Test troop edits in such battles.
 - **Bandit and Orochi raids** are triggered from `Episode.dat` (`サブミッション.txt`). Difficulty is a mode from 0 to 3: Bandit Raid fires after 5, 3 or 1 skipped turns on modes 0, 1 and 2, and Yamata-no-Orochi after 1 skipped turn on mode 3. Losing costs 20% (bandits) or 50% (Orochi) of your funds.
 - **Items** point at buffs by id; the actual numbers live in `battlestate.txt`. Editing a buff changes everything that uses it.
 - `battlestate.txt` also contains income modifiers (kind `都市収入`).
-
 ## Troubleshooting
 
 | Problem | Likely cause / fix |
