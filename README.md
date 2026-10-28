@@ -63,15 +63,15 @@ Close the game. Rename the originals in the game folder (e.g. `Define.dat.bak`),
 
 | Tab | Editable | Not editable |
 |---|---|---|
-| Units (101) | Element, Troops, ATK, DEF, SPD, skill list, map skills | names, faction, LCK/heal (in `unitmodel.txt`), traits |
-| Skills (428) | Level, Brave cost, WT (charge), DLY (delay), Mult (damage/heal multiplier), Hits, Crit, Fixed damage | names, descriptions, ranges, AI weights, extra effects |
-| Cities (151) | Funds (income), Walls | owner, names |
-| Items (225) | Price, effect slots (buff ids), summary and description text | names, images (copies inherit from their original) |
-| Crafting (73) | Recipe cost | ingredients and results |
-| Buffs/States (348) | Value (`add=`), description text | effect type, conditions |
-| Battles (2,672 enemy units in 420 battles + 118 teams) | Troops, ATK, DEF, SPD, LCK, Element, skills, equipment, trait | formations, drops, turn limits, models, names |
+| Units (101) | Element, Troops, ATK, DEF, SPD, skill list, map skills | Names, Faction, LCK/Heal (in `unitmodel.txt`), Traits |
+| Skills (428) | Level, Brave cost, WT (charge), DLY (delay), Mult (damage/heal multiplier), Hits, Crit, Fixed damage | Names, Descriptions, Ranges, AI Weights, Extra Effects |
+| Cities (151) | Funds (income), Walls | Owner, Mames |
+| Items (225) | Price, Effect Slots (buff ids), Summary and description text | Names, Images (copies inherit from their original) |
+| Crafting (73) | Recipe cost | Ingredients and results |
+| Buffs/States (348) | Value (`add=`), Description text | Effect type, Conditions |
+| Battles (2,672 enemy units in 420 battles + 118 teams) | Troops, ATK, DEF, SPD, LCK, Element, skills, equipment, trait | Formations, Drops, Turn Limits, Models, Names |
 
-It can't add or delete entries or rename ids.
+**It can't add or delete entries or rename ids.**
 
 Tools on every tab: search, filters, sortable columns, **Bulk edit** (×, + or = on a column across the filtered rows), per-row **reset**, **Review changes**. Unsaved edits are remembered in your browser.
 
