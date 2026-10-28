@@ -114,11 +114,16 @@ def keystream(s):
     st=[0x67452301,0xefcdab89,0x98badcfe,0x10325476]; cnt=0; ks=b''
     for k in range(64):
         t=s if k==0 else s[k%len(s):]
-        assert len(t)<56
         cnt+=8*len(t)
-        buf=bytearray(64); buf[:len(t)]=t; buf[len(t)]=0x80
-        struct.pack_into('<II',buf,56,cnt&M,cnt>>32)
-        st=transform(st,bytes(buf)); ks+=struct.pack('<4I',*st)
+        d=bytes(t)
+        while len(d)>=64:
+            st=transform(st,d[:64]); d=d[64:]
+        buf=d+b'\x80'
+        buf+=b'\0'*((56-len(buf))%64)
+        buf+=struct.pack('<II',cnt&M,cnt>>32)
+        for q in range(0,len(buf),64):
+            st=transform(st,buf[q:q+64])
+        ks+=struct.pack('<4I',*st)
     return ks
 def lzss(src,usz):
     ring=bytearray(4096); r=0xfee; out=bytearray(); i=0; flags=0

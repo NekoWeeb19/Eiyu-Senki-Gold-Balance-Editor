@@ -91,7 +91,7 @@ td.na{color:var(--muted)}
 </header>
 <div id="banner"></div>
 <div id="drop" class="drop">
-  Drop the extracted text files here: <b>unit.txt, tech.txt, city.txt, item.txt, itemmix.txt, battlestate.txt</b> and the extracted <b>BattleSet_*.txt</b> files to edit,<br>
+  Drop the extracted text files here: <b>unit.txt, tech.txt, city.txt, item.txt, itemmix.txt, battlestate.txt</b> the extracted <b>BattleSet_*.txt</b> files, and the extracted <b>Episode</b> files (サブミッション.txt, sfr_*.txt, susa編*.txt …) to edit,<br>
   plus <b>spot.txt, country.txt, techkind.txt, skill.txt</b> (optional, they add English city / faction / skill-type / map-skill names).
   You can select the whole extracted folder's files at once; unsupported ones are ignored.<br> Everything stays in your browser.<br>
   Edits are spliced into the original text, so nothing else in a file changes.
@@ -216,7 +216,7 @@ function parseBattleFile(text,mask,part,pname){
   }
   return items;
 }
-SPECS.battle={label:"Battles",noun:"units",multi:true,re:'^(?:battle|team) id="([^"]*)"',
+SPECS.battle={label:"Battles",noun:"units",multi:true,parseFile:parseBattleFile,fileLabel:"BattleSet files",zipName:"battleset_edited.zip",repack:"python rpack.py repack BattleSet.dat <folder> BattleSet_new.dat --hints team.txt",re:'^(?:battle|team) id="([^"]*)"',
   inherit:it=>it.baseId?{kind:"unit",id:it.baseId}:null,
   cols:[{label:"Battle / team",sortv:it=>it.gid,render:it=>it.first?`<td class="name"><b>${esc(it.gid)}</b><small>${esc(it.gkind)}${it.ginfo?" · "+esc(it.ginfo):""}</small></td>`:`<td class="na">${esc(it.gid)}</td>`},
     nameCol("Unit",it=>it.name,it=>it.model||(it.baseId?"base: "+it.baseId:"")),
@@ -224,6 +224,39 @@ SPECS.battle={label:"Battles",noun:"units",multi:true,re:'^(?:battle|team) id="(
     TXT("skills","Skills (ids)",true),TXT("equip","Equipment (item ids)",true),TXT("trait","Trait",false)],
   filters:[{label:"Kind",get:it=>it.gkind},{label:"File",get:it=>it.file},{label:"Type",get:it=>it.gtype},{label:"Country",get:it=>it.gcountry,show:v=>enOpt(factionEn)(v)}],
   search:it=>it.gid+" "+it.name+" "+it.model+" "+it.baseId+" "+it.file};
+
+function parseEpisodeFile(text,mask,part,pname){
+  const ctxs=[];let m;
+  const cre=/^[ \t]*(mission|episode) id="([^"]*)"([^\n]*)/gm,ere=/^[ \t]*event timing="[^"]*"[^\n]*?script="([^"]*)"/gm;
+  while((m=cre.exec(mask))){const nm=/name="([^"]*)"/.exec(m[3]),sp=/spot="([^"]*)"/.exec(m[3]);
+    ctxs.push({pos:m.index,label:(nm?nm[1]:m[2]),sub:m[1]+" "+m[2]+(sp?" · "+sp[1]:""),spot:sp?sp[1]:""});}
+  while((m=ere.exec(mask)))ctxs.push({pos:m.index,label:m[1],sub:"event script",spot:""});
+  ctxs.sort((a,b)=>a.pos-b.pos);
+  const ctxAt=pos=>{let c=null;for(const x of ctxs){if(x.pos<=pos)c=x;else break;}return c||{label:"(top of file)",sub:"",spot:""};};
+  const items=[];let n=0;
+  const add=(re,gi,vt,type,lab)=>{
+    const r=new RegExp(re,"dg");let k;
+    while((k=r.exec(mask))){const [s0,e0]=k.indices[gi],c=ctxAt(k.index);
+      items.push({id:pname+"|"+(n++),label:c.label+" › "+type,name:c.label,sub:c.sub,spot:c.spot,vt,vtype:type,extra:lab?lab(k):"",file:pname,part,
+        f:{val:[{start:s0,end:e0,orig:k[gi],val:k[gi],type:vt==="reward"?"text":vt==="rate"||vt==="addv"?"addv":vt==="float"?"float":"int"}]}});}
+  };
+  add('@資金獲得\\(num=(-?\\d+)\\)',1,"int","Gold reward");
+  add('@資金獲得\\(rate=(-?\\d+(?:\\.\\d+)?%?)\\)',1,"rate","Gold gain/loss (% of funds)");
+  add('@売却利率\\(rate=(\\d+(?:\\.\\d+)?)\\)',1,"float","Shop sell-back rate");
+  add('(\\d+)(==|<=)GetPlayMode\\(\\)\\s*&&\\s*(\\d+)<=GetLazyCount\\(\\)',3,"int","Raid after N skipped turns",k=>"difficulty mode "+(k[2]==="=="?k[1]:k[1]+"+"));
+  add('@戦闘_兵力全体変化\\(left=(true|false), rate=(\\d+(?:\\.\\d+)?)\\)',2,"float","Battle troop change ×",k=>k[1]==="true"?"player side":"enemy side");
+  add('@宝具獲得\\(id="([^"]*)"\\)',1,"reward","Item reward");
+  items.sort((a,b)=>a.f.val[0].start-b.f.val[0].start);
+  return items;
+}
+SPECS.episode={label:"Rewards & Raids",noun:"values",multi:true,parseFile:parseEpisodeFile,fileLabel:"Episode files",zipName:"episode_edited.zip",
+  repack:"python rpack.py repack Episode.dat <folder> Episode_new.dat --hints main.txt",
+  re:'^[ \\t]*(?:episode|mission) id="([^"]*)"',
+  cols:[{label:"Mission / event",sortv:it=>it.name,render:it=>`<td class="name"><b>${esc(it.name)}</b><small>${esc(it.sub)}${it.spot?" · "+esc(cityEn(it.spot)||""):""}</small></td>`},
+    {label:"Setting",sortv:it=>it.vtype,render:it=>`<td>${esc(it.vtype)}${it.extra?`<small>${esc(it.extra)}</small>`:""}</td>`},
+    NUM("val","Value")],
+  filters:[{label:"Setting",get:it=>it.vtype},{label:"File",get:it=>it.file}],
+  search:it=>it.name+" "+it.sub+" "+it.vtype+" "+it.extra+" "+it.f.val[0].val+" "+it.file};
 SPECS.spot={lookup:true,re:'^spot id="([^"]*)"',parse:b=>({name:str(b,'名前="([^"]*)"'),f:{}})};
 SPECS.country={lookup:true,re:'^country id="([^"]*)"',parse:b=>({name:str(b,'名前="([^"]*)"'),f:{}})};
 SPECS.skill={lookup:true,re:'^skill id="([^"]*)"',parse:b=>({name:str(b,'名前="([^"]*)"'),f:{}})};
@@ -239,7 +272,7 @@ function stateInfo(id){const s=byId("state",id);if(!s)return null;return s.f.des
 
 function detect(text){
   const mask=maskComments(text);
-  for(const k of["battle",...ALL.filter(x=>x!=="battle")])if(new RegExp(SPECS[k].re,"m").test(mask))return{kind:k,mask};
+  for(const k of["episode","battle",...ALL.filter(x=>x!=="battle"&&x!=="episode")])if(new RegExp(SPECS[k].re,"m").test(mask))return{kind:k,mask};
   return null;
 }
 function loadText(name,text){
@@ -247,10 +280,12 @@ function loadText(name,text){
   const d=detect(text);if(!d)return false;
   const spec=SPECS[d.kind];
   if(spec.multi){
+    const its=spec.parseFile(text,d.mask,0,name);
+    if(!its.length)return false;
     const F=files[d.kind]||(files[d.kind]={multi:true,name:"",parts:[],items:[]});
     let pi=F.parts.findIndex(x=>x.name===name);if(pi<0){pi=F.parts.length;F.parts.push({name});}
-    F.parts[pi]={name,text,items:parseBattleFile(text,d.mask,pi,name)};
-    F.items=F.parts.flatMap(x=>x.items);F.name="BattleSet files ("+F.parts.length+")";F.text="";
+    F.parts[pi]={name,text,items:spec.parseFile(text,d.mask,pi,name)};
+    F.items=F.parts.flatMap(x=>x.items);F.name=spec.fileLabel+" ("+F.parts.length+")";F.text="";
     restoreDraft(d.kind);return d.kind;
   }
   const items=blocks(spec,text,d.mask).map(b=>Object.assign({id:b.id},spec.parse(b)));
@@ -319,7 +354,7 @@ function cellHTML(kind,it,i,col){
     if(f.type==="text")return`<input class="t${cls}" ${at} value="${esc(f.val)}">`;
     return`<input class="${col.key==="mult"?"f":"n"}${cls}" ${at} value="${esc(f.val)}" inputmode="decimal">`;
   }).join(" ");
-  const extra=(col.key==="skills"&&files.tech)||(col.key==="mapsk"&&files.skill)||(col.key==="equip"&&files.item)?`<div class="chips" data-chip>${chips(col.key,arr[0].val)}</div>`:"";
+  const extra=(col.key==="skills"&&files.tech)||(col.key==="mapsk"&&files.skill)||(col.key==="equip"&&files.item)?`<div class="chips" data-chip>${chips(col.key,arr[0].val)}</div>`:(it.vt==="reward"&&files.item?`<div class="chips" data-chip>${chips("equip",arr[0].val)}</div>`:"");
   return`<td class="${col.wide?"wide":""}">${cells}${extra}</td>`;
 }
 function curVal(it,col){
@@ -373,7 +408,7 @@ function renderStatus(){
   for(const k of LOOKUPS){const F=files[k];if(F)h+=`<span class="pill" title="Used only to show English names">${esc(F.name)}: lookup</span>`;}
   $("#pills").innerHTML=h;
   const F=files[ui.tab];
-  $("#btn-dl").disabled=!F;$("#btn-dl").textContent=F?(F.multi?"Download edited battle files (.zip)":"Download "+F.name):"Download";
+  $("#btn-dl").disabled=!F;$("#btn-dl").textContent=F?(F.multi?"Download edited files (.zip)":"Download "+F.name):"Download";
   $("#btn-dl-all").disabled=!total;$("#btn-changes").disabled=!KINDS.some(k=>files[k]);
   $("#tabs").querySelectorAll("button").forEach(b=>{const n=stat(b.dataset.k).n;b.firstElementChild.textContent=n?" ●":"";});
 }
@@ -393,7 +428,7 @@ $("#tbody").addEventListener("input",e=>{
   f.val=t.value;
   t.classList.toggle("chg",changed(f));t.classList.toggle("bad",!valid(f));
   if(f.type==="state"){const c=t.parentElement.querySelector("[data-chip]");if(c)c.innerHTML=chips("eff",f.val);}
-  else if(["skills","mapsk","equip"].includes(t.dataset.k)){const c=t.closest("td").querySelector("[data-chip]");if(c)c.innerHTML=chips(t.dataset.k,f.val);}
+  else if(["skills","mapsk","equip"].includes(t.dataset.k)||it.vt==="reward"){const c=t.closest("td").querySelector("[data-chip]");if(c)c.innerHTML=chips(it.vt==="reward"?"equip":t.dataset.k,f.val);}
   saveDraft(kind);renderStatus();
 });
 $("#tbody").addEventListener("click",e=>{
@@ -416,6 +451,7 @@ $("#tools").addEventListener("click",e=>{
   if(Number.isNaN(v)){note("Bulk value must be a number.",true);return;}
   const rows=visible(ui.tab);let n=0;
   for(const{it}of rows)for(const f of it.f[key]){
+    if(it.vt==="reward")continue;
     const pct=f.val.trim().endsWith("%"),cur=parseFloat(f.val);if(Number.isNaN(cur))continue;
     let r=op==="mul"?cur*v:op==="add"?cur+v:v;
     r=f.type==="int"?Math.round(r):Math.round(r*100)/100;
@@ -450,11 +486,11 @@ function download(kind){
     setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);};
   if(F.multi){
     const idx=F.parts.map((_,pi)=>pi).filter(pi=>allFields(kind).some(x=>x.it.part===pi&&changed(x.f)));
-    if(!idx.length){note("No edited battle files to download.");return false;}
+    if(!idx.length){note("No edited files to download.");return false;}
     const zip=makeZip(idx.map(pi=>({name:F.parts[pi].name,text:exportText(kind,pi)})));
-    const a=document.createElement("a");a.href=URL.createObjectURL(zip);a.download="battleset_edited.zip";document.body.appendChild(a);a.click();
+    const a=document.createElement("a");a.href=URL.createObjectURL(zip);a.download=SPECS[kind].zipName;document.body.appendChild(a);a.click();
     setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
-    note("Downloaded battleset_edited.zip with "+idx.length+" edited file"+(idx.length>1?"s":"")+". Unzip it over your BattleSet extract folder, then: python rpack.py repack BattleSet.dat <folder> BattleSet_new.dat --hints team.txt");
+    note("Downloaded "+SPECS[kind].zipName+" with "+idx.length+" edited file"+(idx.length>1?"s":"")+". Unzip it over your extract folder, then: "+SPECS[kind].repack);
     return true;
   }
   save(F.name,exportText(kind));
