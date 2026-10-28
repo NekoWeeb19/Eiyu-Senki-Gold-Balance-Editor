@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Define Editor</title>
+<style>
+:root{
+  --bg:#f6f7f9; --surface:#fff; --surface2:#eef0f4; --text:#1c2230; --muted:#667085; --line:#dfe3ea;
+  --accent:#0f766e; --accent-ink:#fff; --chg:#fff4d6; --chg-line:#e0a100; --bad:#fde8e8; --bad-line:#d92d20; --ok:#067647;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12151b; --surface:#1a1f28; --surface2:#232a36; --text:#e6e9ef; --muted:#98a2b3; --line:#2e3644;
+    --accent:#2dd4bf; --accent-ink:#06201c; --chg:#3a3016; --chg-line:#e0a100; --bad:#3d1b1b; --bad-line:#f97066; --ok:#47cd89;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12151b; --surface:#1a1f28; --surface2:#232a36; --text:#e6e9ef; --muted:#98a2b3; --line:#2e3644;
+  --accent:#2dd4bf; --accent-ink:#06201c; --chg:#3a3016; --chg-line:#e0a100; --bad:#3d1b1b; --bad-line:#f97066; --ok:#47cd89;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP","Yu Gothic",sans-serif}
+header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+h1{font-size:16px;margin:0 6px 0 0;font-weight:650}
+.spacer{flex:1}
+button,.btn{font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover,.btn:hover{background:var(--surface2)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.primary:hover{filter:brightness(1.07)}
+button:disabled{opacity:.45;cursor:default}
+.pill{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+.pill.ok{color:var(--ok);border-color:currentColor}
+nav{display:flex;gap:4px;padding:12px 16px 0}
+nav button{border-radius:8px 8px 0 0;border-bottom:none;padding:8px 16px;color:var(--muted)}
+nav button.on{background:var(--surface);color:var(--text);font-weight:600;border-color:var(--line)}
+.panel{margin:0 16px 24px;background:var(--surface);border:1px solid var(--line);border-radius:0 10px 10px 10px}
+.tools{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+.tools label{color:var(--muted);font-size:12px;display:flex;gap:6px;align-items:center}
+input,select{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0}
+.search{min-width:200px}
+.wrap{overflow:auto;max-height:calc(100vh - 230px)}
+table{border-collapse:separate;border-spacing:0;width:100%}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:nowrap}
+th{position:sticky;top:0;background:var(--surface2);font-size:12px;color:var(--muted);font-weight:600;cursor:pointer;user-select:none;z-index:2}
+th.nosort{cursor:default}
+th .arr{margin-left:4px;color:var(--accent)}
+td.name b{font-weight:600}
+td.name small,td small{display:block;color:var(--muted);font-size:11.5px}
+td.wide{white-space:normal;min-width:260px}
+td.desc{white-space:normal;min-width:220px;max-width:340px;color:var(--muted);font-size:12.5px}
+input.n{width:74px;text-align:right;font-variant-numeric:tabular-nums}
+input.f{width:70px}
+input.t{width:100%;min-width:240px}
+.chg{background:var(--chg)!important;border-color:var(--chg-line)!important}
+.bad{background:var(--bad)!important;border-color:var(--bad-line)!important}
+.na{color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+.chip{font-size:11px;border:1px solid var(--line);border-radius:5px;padding:0 5px;color:var(--muted)}
+.chip.unk{color:var(--bad-line);border-color:var(--bad-line)}
+.empty{padding:48px 16px;text-align:center;color:var(--muted)}
+.drop{margin:16px;border:2px dashed var(--line);border-radius:12px;padding:44px 16px;text-align:center;color:var(--muted)}
+.drop.over{border-color:var(--accent);color:var(--text)}
+.note{font-size:12px;color:var(--muted);padding:10px 12px}
+.banner{margin:12px 16px 0;padding:8px 12px;border-radius:8px;border:1px solid var(--bad-line);background:var(--bad)}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);max-width:760px;width:92vw;padding:0}
+dialog::backdrop{background:#0006}
+dialog .hd{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+dialog .bd{padding:8px 16px 16px;max-height:60vh;overflow:auto}
+dialog table td{white-space:normal}
+.rbtn{padding:1px 8px;font-size:12px;color:var(--muted)}
+@media (max-width:700px){ .panel,.banner{margin-left:8px;margin-right:8px} header,nav{padding-left:8px;padding-right:8px} .wrap{max-height:none} }
+.effrow{margin-bottom:4px}
+nav button .dot{color:var(--chg-line)}
+nav button:disabled{opacity:.4;cursor:default}
+td.na{color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Define Editor</h1>
+  <label class="btn" for="pick">Open files…</label>
+  <input id="pick" type="file" accept=".txt,text/plain" multiple hidden>
+  <span id="pills" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+  <span class="spacer"></span>
+  <button id="btn-changes" disabled>Review changes</button>
+  <button id="btn-dl" class="primary" disabled>Download</button>
+  <button id="btn-dl-all" disabled>Download all edited</button>
+  <button id="btn-theme" title="Toggle light/dark">◐</button>
+</header>
+<div id="banner"></div>
+<div id="drop" class="drop">
+  Drop the extracted text files here: <b>unit.txt, tech.txt, city.txt, item.txt, itemmix.txt, battlestate.txt</b> and the extracted <b>BattleSet_*.txt</b> files to edit,<br>
+  plus <b>spot.txt, country.txt, techkind.txt, skill.txt</b> (optional, they add English city / faction / skill-type / map-skill names).
+  You can select the whole extracted folder's files at once; unsupported ones are ignored.<br> Everything stays in your browser.<br>
+  Edits are spliced into the original text, so nothing else in a file changes.
+</div>
+<div id="app" hidden>
+  <nav id="tabs"></nav>
+  <div class="panel"><div id="tools" class="tools"></div><div class="wrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div><div id="foot" class="note"></div></div>
+</div>
+<dialog id="dlg"><div class="hd"><b>Changes</b><button id="dlg-close">Close</button></div><div class="bd" id="dlg-body"></div></dialog>
+
+<script>
+"use strict";
+const ELEM={闘:"BRL",戦:"BSH",剣:"SWD",槍:"SPR",投:"THR",弓:"BOW",銃:"GUN",砲:"CAN",術:"MAG"};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- parsing (offsets are kept against the ORIGINAL text) ---------- */
+function maskComments(s){
+  let out="",i=0,n=s.length,inStr=false;
+  while(i<n){
+    const c=s[i];
+    if(inStr){out+=c;if(c==='"'||c==="\n")inStr=false;i++;continue;}
+    if(c==='"'){inStr=true;out+=c;i++;continue;}
+    if(c==="/"&&s[i+1]==="/"){while(i<n&&s[i]!=="\n"&&s[i]!=="\r"){out+=" ";i++;}continue;}
+    if(c==="/"&&s[i+1]==="*"){const e=s.indexOf("*/",i+2);const end=e<0?n:e+2;for(;i<end;i++)out+=(s[i]==="\n"||s[i]==="\r")?s[i]:" ";continue;}
+    out+=c;i++;
+  }
+  return out;
+}
+function blocks(spec,text,mask){
+  const re=new RegExp(spec.re,"gm"),st=[];let m;
+  while((m=re.exec(mask)))st.push({id:m.slice(1).join(" + "),pos:m.index});
+  return st.map((s,i)=>({id:s.id,base:s.pos,block:mask.slice(s.pos,i+1<st.length?st[i+1].pos:mask.length)}));
+}
+function mkField(b,m,type){const [s,e]=m.indices[1];return{start:b.base+s,end:b.base+e,orig:m[1],val:m[1],type};}
+function one(b,src,type){const m=new RegExp(src,"d").exec(b.block);return m?[mkField(b,m,type)]:[];}
+function all(b,src,type){const r=new RegExp(src,"dg");const o=[];let m;while((m=r.exec(b.block)))o.push(mkField(b,m,type));return o;}
+function str(b,src){const m=new RegExp(src).exec(b.block);return m?m[1]:"";}
+const PRE="(?<=[\\s,])";
+const nameCol=(label,name,sub)=>({label,sortv:it=>(name(it)||"").toLowerCase(),render:it=>`<td class="name"><b>${esc(name(it)||it.id)}</b><small>${esc(sub?sub(it):it.id)}</small></td>`});
+const textCol=(label,get,cls)=>({label,sortv:it=>get(it),render:it=>`<td class="${cls||""}">${esc(get(it)||"—")}</td>`});
+const NUM=(key,label)=>({key,label,kind:"f",num:true});
+const TXT=(key,label,wide)=>({key,label,kind:"f",wide});
+
+const en=(kind,id)=>{const b=byId(kind,id);return b&&b.name?b.name:"";};
+const cityEn=id=>en("spot",id),factionEn=id=>en("country",id);
+function catEn(id){const b=byId("techkind",id);if(!b||!b.name)return"";return b.name+(b.elem&&ELEM[b.elem]?" · "+ELEM[b.elem]:"");}
+const enCol=(label,get,lookup)=>({label,sortv:it=>(lookup(get(it))||get(it)||""),render:it=>{const j=get(it),e=lookup(j);return`<td>${esc(e||j||"—")}${e&&j?`<small>${esc(j)}</small>`:""}</td>`;}});
+const enOpt=(lookup)=>v=>{const e=lookup(v);return e&&e!==v?e+" ("+v+")":v;};
+/* ---------- file-type specs ---------- */
+const SPECS={
+  unit:{label:"Units",noun:"units",re:'^unit id="([^"]*)"',
+    parse:b=>({name:str(b,'名前="([^"]*)"'),faction:str(b,'所属="([^"]*)"'),
+      f:{elem:one(b,PRE+'属性="([^"]*)"',"elem"),hp:one(b,PRE+"兵=(-?\\d+)","int"),atk:one(b,PRE+"攻=(-?\\d+)","int"),
+         def:one(b,PRE+"防=(-?\\d+)","int"),spd:one(b,PRE+"速=(-?\\d+)","int"),skills:one(b,PRE+'技="([^"]*)"',"text"),mapsk:one(b,PRE+'スキル="([^"]*)"',"text")}}),
+    cols:[nameCol("Unit",it=>it.name),enCol("Faction",it=>it.faction,v=>factionEn(v)),{label:"Elem",key:"elem",kind:"f"},NUM("hp","Troops"),NUM("atk","ATK"),NUM("def","DEF"),NUM("spd","SPD"),
+      TXT("skills","Skills (ids, comma-separated)",true),TXT("mapsk","Map skills",true)],
+    filters:[{label:"Element",get:it=>it.f.elem[0]?it.f.elem[0].val:""},{label:"Faction",get:it=>it.faction,show:v=>enOpt(factionEn)(v)}],
+    search:it=>it.id+" "+it.name+" "+it.faction+" "+factionEn(it.faction)},
+  tech:{label:"Skills",noun:"skills",re:'^tech id="([^"]*)"',
+    parse:b=>({name:str(b,'名前="([^"]*)"'),cat:str(b,'種類="([^"]*)"'),target:str(b,'効果対象="([^"]*)"'),desc:str(b,'説明="([^"]*)"'),
+      f:{lv:one(b,PRE+"レベル=(\\d+)","int"),brave:one(b,PRE+"ブレイブ=(\\d+)","int"),wt:one(b,PRE+"溜め=(\\d+)","int"),dly:one(b,PRE+"ディレイ=(\\d+)","int"),
+         mult:all(b,"(?<=[\\s,(])倍率=(-?\\d+(?:\\.\\d+)?)","float"),hits:all(b,PRE+"回数=(\\d+)","int"),crit:all(b,PRE+"クリティカル=(-?\\d+)","int"),fixed:all(b,PRE+"固定ダメージ=(\\d+)","int")}}),
+    cols:[nameCol("Skill",it=>it.name),{label:"Type",sortv:it=>catEn(it.cat)||it.cat,render:it=>`<td>${esc(catEn(it.cat)||it.cat)}<small>${esc(it.cat)} · ${esc(it.target)}</small></td>`},
+      NUM("lv","Lv"),NUM("brave","Brave"),NUM("wt","WT"),NUM("dly","DLY"),NUM("mult","Mult ×"),NUM("hits","Hits"),NUM("crit","Crit"),NUM("fixed","Fixed dmg"),textCol("Description",it=>it.desc,"desc")],
+    filters:[{label:"Type",get:it=>it.cat,show:v=>catEn(v)?catEn(v)+" ("+v+")":v},{label:"Target",get:it=>it.target}],
+    search:it=>it.id+" "+it.name+" "+it.desc},
+  city:{label:"Cities",noun:"cities",re:'^city id="([^"]*)"',
+    parse:b=>({name:b.id,faction:str(b,'所属="([^"]*)"'),f:{funds:one(b,PRE+"資金=(-?\\d+)","int"),wall:one(b,PRE+"防壁=(-?\\d+)","int")}}),
+    cols:[nameCol("City",it=>cityEn(it.id)||it.id,it=>it.id),enCol("Owner",it=>it.faction,v=>factionEn(v)),NUM("funds","Funds (income)"),NUM("wall","Walls")],
+    filters:[{label:"Owner",get:it=>it.faction,show:v=>enOpt(factionEn)(v)}],search:it=>it.id+" "+cityEn(it.id)+" "+it.faction+" "+factionEn(it.faction)},
+  item:{label:"Items",noun:"items",re:'^item id="([^"]*)"',
+    parse:b=>({name:str(b,'名前="([^"]*)"'),copyOf:str(b,'^item id="[^"]*", 元="([^"]*)"'),
+      f:{price:one(b,PRE+"価格=(\\d+)","int"),eff:all(b,PRE+'効果[１２３４５]?=@戦闘状態\\(id=State\\("([^"]*)"\\)\\)',"state"),
+         brief:one(b,PRE+'概略="([^"]*)"',"text"),desc:one(b,PRE+'説明="([^"]*)"',"text")}}),
+    cols:[{label:"Item",sortv:it=>(itemName(it)||"").toLowerCase(),render:it=>`<td class="name"><b>${esc(itemName(it)||it.id)}</b><small>${esc(it.id)}${it.copyOf?" · copy of "+esc(it.copyOf):""}</small></td>`},
+      NUM("price","Price"),{label:"Effects (state ids)",key:"eff",kind:"f",wide:true},TXT("brief","Summary text",true),TXT("desc","Description text",true)],
+    filters:[{label:"Kind",get:it=>it.copyOf?"copies":"originals"}],search:it=>it.id+" "+itemName(it)},
+  itemmix:{label:"Crafting",noun:"recipes",re:'^itemmix id1="([^"]*)", id2="([^"]*)"',
+    parse:b=>({name:str(b,'mixed="([^"]*)"'),a:str(b,'id1="([^"]*)"'),b:str(b,'id2="([^"]*)"'),f:{cost:one(b,PRE+"資金=(-?\\d+)","int")}}),
+    cols:[{label:"Result",sortv:it=>it.name,render:it=>`<td class="name"><b>${esc(itemEn(it.name)||it.name)}</b><small>${esc(it.name)}</small></td>`},
+      {label:"Ingredient A",sortv:it=>it.a,render:it=>`<td>${esc(itemEn(it.a)||it.a)}<small>${esc(it.a)}</small></td>`},
+      {label:"Ingredient B",sortv:it=>it.b,render:it=>`<td>${esc(itemEn(it.b)||it.b)}<small>${esc(it.b)}</small></td>`},NUM("cost","Cost")],
+    filters:[],search:it=>it.id+" "+itemEn(it.name)+" "+itemEn(it.a)+" "+itemEn(it.b)},
+  state:{label:"Buffs/States",noun:"states",re:'^state id="([^"]*)"',
+    parse:b=>{const m=/効果=@([^(\s]+)\(kind="([^"]*)"/.exec(b.block)||[];
+      return{name:str(b,'名前="([^"]*)"'),etype:m[1]||"",kind:m[2]||"",need:str(b,'need="([^"]*)"'),
+        f:{add:one(b,"(?<=[\\s,(])add=(-?\\d+(?:\\.\\d+)?%?)","addv"),desc:one(b,PRE+'説明="([^"]*)"',"text")}};},
+    cols:[nameCol("State",it=>it.name||(it.f.desc[0]?it.f.desc[0].val:"")),{label:"Effect",sortv:it=>it.etype+it.kind,render:it=>`<td>${esc(it.etype.replace("@",""))}<small>${esc(it.kind)}</small></td>`},
+      NUM("add","Value (add)"),textCol("Condition",it=>it.need),TXT("desc","Description text",true)],
+    filters:[{label:"Effect",get:it=>it.etype},{label:"Kind",get:it=>it.kind}],search:it=>it.id+" "+it.name+" "+it.kind+" "+(it.f.desc[0]?it.f.desc[0].val:"")},
+};
+function parseBattleFile(text,mask,part,pname){
+  const marks=[];let m;
+  const gre=/^(battle|team) id="([^"]*)"/gm,ure=/^[ \t]+unit id="([^"]*)"/gm,fre=/^[ \t]*form\b/gm;
+  while((m=gre.exec(mask)))marks.push({t:"g",pos:m.index,kind:m[1],id:m[2]});
+  while((m=ure.exec(mask)))marks.push({t:"u",pos:m.index,id:m[1]});
+  while((m=fre.exec(mask)))marks.push({t:"f",pos:m.index});
+  marks.sort((a,b)=>a.pos-b.pos);
+  const items=[],seen={};let g=null;
+  for(let i=0;i<marks.length;i++){
+    const k=marks[i];
+    if(k.t==="g"){
+      const br=mask.indexOf("{",k.pos),nextG=marks.slice(i+1).find(x=>x.t==="g"),lim=nextG?nextG.pos:mask.length;
+      const head=mask.slice(k.pos,br>=0&&br<lim?br:lim);
+      const hv=key=>{const r=new RegExp(key+'="([^"]*)"').exec(head);return r?r[1]:"";};
+      const info=[hv("戦場"),hv("種類"),hv("AI")&&("AI "+hv("AI")),hv("管轄")&&("管轄 "+hv("管轄"))].filter(Boolean);
+      if(/兵力="/.test(head))info.push("兵力="+hv("兵力"));
+      g={kind:k.kind,id:k.id,type:hv("種類"),country:hv("国")||hv("所属"),info:info.join(" · "),first:true,n:0};
+    }else if(k.t==="u"&&g){
+      const end=marks[i+1]?marks[i+1].pos:mask.length;
+      const b={base:k.pos,block:mask.slice(k.pos,end)};
+      const nm=str(b,'名前="([^"]*)"');
+      let uid=pname+"|"+g.id+"/"+k.id;if(seen[uid]){seen[uid]++;uid+="~"+seen[uid];}else seen[uid]=1;
+      items.push({id:uid,label:g.id+" › "+(nm||k.id),name:nm||k.id,gid:g.id,gkind:g.kind,gtype:g.type,gcountry:g.country,ginfo:g.info,first:g.first,
+        file:pname,part,model:str(b,'モデル="([^"]*)"'),baseId:str(b,'ベース="([^"]*)"'),
+        f:{hp:one(b,PRE+"兵=(-?\\d+)","int"),atk:one(b,PRE+"攻=(-?\\d+)","int"),def:one(b,PRE+"防=(-?\\d+)","int"),spd:one(b,PRE+"速=(-?\\d+)","int"),
+           luck:one(b,PRE+"運=(-?\\d+)","int"),elem:one(b,PRE+'属性="([^"]*)"',"elem"),skills:one(b,PRE+'技="([^"]*)"',"text"),
+           equip:one(b,PRE+'装備="([^"]*)"',"text"),trait:one(b,PRE+'特性="([^"]*)"',"text")}});
+      g.first=false;
+    }
+  }
+  return items;
+}
+SPECS.battle={label:"Battles",noun:"units",multi:true,re:'^(?:battle|team) id="([^"]*)"',
+  inherit:it=>it.baseId?{kind:"unit",id:it.baseId}:null,
+  cols:[{label:"Battle / team",sortv:it=>it.gid,render:it=>it.first?`<td class="name"><b>${esc(it.gid)}</b><small>${esc(it.gkind)}${it.ginfo?" · "+esc(it.ginfo):""}</small></td>`:`<td class="na">${esc(it.gid)}</td>`},
+    nameCol("Unit",it=>it.name,it=>it.model||(it.baseId?"base: "+it.baseId:"")),
+    NUM("hp","Troops"),NUM("atk","ATK"),NUM("def","DEF"),NUM("spd","SPD"),NUM("luck","LCK"),{label:"Elem",key:"elem",kind:"f"},
+    TXT("skills","Skills (ids)",true),TXT("equip","Equipment (item ids)",true),TXT("trait","Trait",false)],
+  filters:[{label:"Kind",get:it=>it.gkind},{label:"File",get:it=>it.file},{label:"Type",get:it=>it.gtype},{label:"Country",get:it=>it.gcountry,show:v=>enOpt(factionEn)(v)}],
+  search:it=>it.gid+" "+it.name+" "+it.model+" "+it.baseId+" "+it.file};
+SPECS.spot={lookup:true,re:'^spot id="([^"]*)"',parse:b=>({name:str(b,'名前="([^"]*)"'),f:{}})};
+SPECS.country={lookup:true,re:'^country id="([^"]*)"',parse:b=>({name:str(b,'名前="([^"]*)"'),f:{}})};
+SPECS.skill={lookup:true,re:'^skill id="([^"]*)"',parse:b=>({name:str(b,'名前="([^"]*)"'),f:{}})};
+SPECS.techkind={lookup:true,re:'^tech_kind id="([^"]*)"',parse:b=>({name:str(b,'名前="([^"]*)"'),elem:str(b,'属性="([^"]*)"'),f:{}})};
+const ALL=Object.keys(SPECS),KINDS=ALL.filter(k=>!SPECS[k].lookup),LOOKUPS=ALL.filter(k=>SPECS[k].lookup);
+const files={};for(const k of ALL)files[k]=null;
+const ui={tab:"unit",sort:{},q:"",f:{},limit:300};
+function byId(kind,id){const F=files[kind];return F?F.items.find(x=>x.id===id):null;}
+function itemName(it){if(it.name)return it.name;if(it.copyOf){const b=byId("item",it.copyOf);return b?b.name:"";}return"";}
+function itemEn(id){const b=byId("item",id);return b?itemName(b):"";}
+function techNames(){const m={};if(files.tech)for(const t of files.tech.items)m[t.id]=t.name;return m;}
+function stateInfo(id){const s=byId("state",id);if(!s)return null;return s.f.desc[0]?s.f.desc[0].val:(s.name||id);}
+
+function detect(text){
+  const mask=maskComments(text);
+  for(const k of["battle",...ALL.filter(x=>x!=="battle")])if(new RegExp(SPECS[k].re,"m").test(mask))return{kind:k,mask};
+  return null;
+}
+function loadText(name,text){
+  if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+  const d=detect(text);if(!d)return false;
+  const spec=SPECS[d.kind];
+  if(spec.multi){
+    const F=files[d.kind]||(files[d.kind]={multi:true,name:"",parts:[],items:[]});
+    let pi=F.parts.findIndex(x=>x.name===name);if(pi<0){pi=F.parts.length;F.parts.push({name});}
+    F.parts[pi]={name,text,items:parseBattleFile(text,d.mask,pi,name)};
+    F.items=F.parts.flatMap(x=>x.items);F.name="BattleSet files ("+F.parts.length+")";F.text="";
+    restoreDraft(d.kind);return d.kind;
+  }
+  const items=blocks(spec,text,d.mask).map(b=>Object.assign({id:b.id},spec.parse(b)));
+  files[d.kind]={name,text,items};
+  if(!spec.lookup)restoreDraft(d.kind);return d.kind;
+}
+
+/* ---------- validation / output ---------- */
+function valid(f){
+  const v=f.val.trim();
+  if(f.type==="int")return/^-?\d+$/.test(v);
+  if(f.type==="float")return/^-?\d+(\.\d+)?$/.test(v);
+  if(f.type==="addv")return/^-?\d+(\.\d+)?%?$/.test(v);
+  if(f.type==="elem")return v in ELEM;
+  if(f.type==="state")return!/["\r\n]/.test(f.val)&&v!=="";
+  return!/["\r\n]/.test(f.val);
+}
+function out(f){
+  if(f.type==="text"||f.type==="state")return f.val;
+  let v=f.val.trim();
+  if(f.type==="float"&&!v.includes("."))v+=".0";
+  return v;
+}
+const changed=f=>f.val!==f.orig&&out(f)!==f.orig;
+function allFields(kind){const a=[];for(const it of files[kind].items)for(const k in it.f)it.f[k].forEach((f,j)=>a.push({it,k,j,f}));return a;}
+function exportText(kind,pi){
+  const F=files[kind];let t=pi===undefined?F.text:F.parts[pi].text;
+  for(const x of allFields(kind).filter(x=>changed(x.f)&&(pi===undefined||x.it.part===pi)).sort((a,b)=>b.f.start-a.f.start))t=t.slice(0,x.f.start)+out(x.f)+t.slice(x.f.end);
+  return t;
+}
+
+/* ---------- draft persistence (best effort) ---------- */
+const draftKey=k=>"define-editor:"+k;
+function saveDraft(kind){
+  try{const d={};for(const x of allFields(kind))if(changed(x.f))d[x.it.id+"|"+x.k+"|"+x.j]=x.f.val;
+    if(Object.keys(d).length)localStorage.setItem(draftKey(kind),JSON.stringify(d));else localStorage.removeItem(draftKey(kind));}catch(e){}
+}
+function restoreDraft(kind){
+  try{const d=JSON.parse(localStorage.getItem(draftKey(kind))||"null");if(!d)return;let n=0;
+    for(const x of allFields(kind)){const v=d[x.it.id+"|"+x.k+"|"+x.j];if(v!==undefined){x.f.val=v;n++;}}
+    if(n)note("Restored "+n+" unsaved edit"+(n>1?"s":"")+" for "+files[kind].name+" from this browser.");}catch(e){}
+}
+function note(msg,bad){$("#banner").innerHTML=msg?`<div class="banner" style="${bad?"":"border-color:var(--line);background:var(--surface)"}">${esc(msg)}</div>`:"";}
+
+/* ---------- table rendering ---------- */
+function chips(key,val){
+  if(key==="skills"){const nm=techNames();return val.split(",").filter(s=>s.trim()).map(id=>{id=id.trim();return nm[id]?`<span class="chip">${esc(nm[id])}</span>`:`<span class="chip unk" title="no such skill id in tech.txt">? ${esc(id)}</span>`;}).join("");}
+  if(key==="equip")return val.split(",").filter(s=>s.trim()).map(id=>{id=id.trim();const e=itemEn(id);return e?`<span class="chip">${esc(e)}</span>`:`<span class="chip unk" title="no such item id in item.txt">? ${esc(id)}</span>`;}).join("");
+  if(key==="mapsk")return val.split(",").filter(s=>s.trim()).map(x=>{const[id,lv]=x.trim().split(":");const e=en("skill",id);return e?`<span class="chip">${esc(e)}${lv!==undefined?": "+esc(lv):""}</span>`:`<span class="chip unk" title="no such map skill in skill.txt">? ${esc(x)}</span>`;}).join("");
+  const d=stateInfo(val.trim());
+  return d!==null?`<span class="chip">${esc(d)}</span>`:`<span class="chip unk" title="no such state id in battlestate.txt">? ${esc(val)}</span>`;
+}
+function cellHTML(kind,it,i,col){
+  const arr=it.f[col.key];
+  if(!arr.length){
+    const inh=SPECS[kind].inherit?SPECS[kind].inherit(it):(it.copyOf?{kind,id:it.copyOf}:null);
+    if(inh){const b=byId(inh.kind,inh.id);const ba=b&&b.f[col.key]?b.f[col.key]:[];
+      return`<td class="na" title="inherited from ${esc(inh.id)} (${esc(inh.kind)}.txt); edit it there, or set a value in the battle line">${ba.map(f=>esc(f.val)).join(", ")||(b?"–":"?")}</td>`;}
+    return`<td><span class="na">–</span></td>`;
+  }
+  const cells=arr.map((f,j)=>{
+    const cls=(changed(f)?" chg":"")+(valid(f)?"":" bad");
+    const at=`data-i="${i}" data-k="${col.key}" data-j="${j}" title="original: ${esc(f.orig)}"`;
+    if(f.type==="elem")return`<select ${at} class="${cls}">${Object.keys(ELEM).map(e=>`<option value="${e}"${f.val===e?" selected":""}>${e} ${ELEM[e]}</option>`).join("")}</select>`;
+    if(f.type==="state"){const live=files.state?`<div class="chips" data-chip>${chips("eff",f.val)}</div>`:"";return`<div class="effrow"><input class="t${cls}" ${at} value="${esc(f.val)}">${live}</div>`;}
+    if(f.type==="text")return`<input class="t${cls}" ${at} value="${esc(f.val)}">`;
+    return`<input class="${col.key==="mult"?"f":"n"}${cls}" ${at} value="${esc(f.val)}" inputmode="decimal">`;
+  }).join(" ");
+  const extra=(col.key==="skills"&&files.tech)||(col.key==="mapsk"&&files.skill)||(col.key==="equip"&&files.item)?`<div class="chips" data-chip>${chips(col.key,arr[0].val)}</div>`:"";
+  return`<td class="${col.wide?"wide":""}">${cells}${extra}</td>`;
+}
+function curVal(it,col){
+  if(col.sortv)return col.sortv(it);
+  const a=it.f[col.key];if(!a.length)return null;
+  const v=a[0].val;return col.num?parseFloat(v):v;
+}
+const fval=(sp,j,it)=>sp.filters[j].get(it)||"(none)";
+function visible(kind){
+  const F=files[kind],sp=SPECS[kind];if(!F)return[];
+  const q=ui.q.trim().toLowerCase(),fl=ui.f[kind]||[];
+  let rows=F.items.map((it,i)=>({it,i}));
+  if(q)rows=rows.filter(({it})=>sp.search(it).toLowerCase().includes(q));
+  sp.filters.forEach((_,j)=>{if(fl[j])rows=rows.filter(({it})=>fval(sp,j,it)===fl[j]);});
+  const s=ui.sort[kind];
+  if(s){const col=sp.cols[s.c];
+    rows.sort((a,b)=>{const x=curVal(a.it,col),y=curVal(b.it,col);
+      if(x===null||Number.isNaN(x))return 1;if(y===null||Number.isNaN(y))return-1;
+      return(x<y?-1:x>y?1:0)*s.d;});}
+  return rows;
+}
+function renderTools(){
+  const kind=ui.tab,sp=SPECS[kind],fl=ui.f[kind]||[];
+  let h=`<input class="search" id="q" placeholder="Search…" value="${esc(ui.q)}">`;
+  sp.filters.forEach((flt,j)=>{
+    const opts=[...new Set(files[kind].items.map(it=>fval(sp,j,it)))].sort();
+    h+=`<label>${flt.label} <select data-flt="${j}"><option value="">all</option>${opts.map(x=>`<option value="${esc(x)}"${fl[j]===x?" selected":""}>${esc(flt.show?flt.show(x):x)}</option>`).join("")}</select></label>`;
+  });
+  const nc=sp.cols.filter(c=>c.num);
+  h+=`<span class="spacer"></span><span style="color:var(--muted);font-size:12px">Bulk on visible rows:</span>
+  <select id="b-col">${nc.map(c=>`<option value="${c.key}">${c.label}</option>`).join("")}</select>
+  <select id="b-op"><option value="mul">×</option><option value="add">+</option><option value="set">=</option></select>
+  <input id="b-val" class="n" value="1.0"><button id="b-go">Apply</button>`;
+  $("#tools").innerHTML=h;
+}
+function renderTable(){
+  const kind=ui.tab,F=files[kind],sp=SPECS[kind];
+  const s=ui.sort[kind];
+  $("#thead").innerHTML="<tr>"+sp.cols.map((c,ci)=>`<th data-c="${ci}">${esc(c.label)}${s&&s.c===ci?`<span class="arr">${s.d>0?"▲":"▼"}</span>`:""}</th>`).join("")+'<th class="nosort"></th></tr>';
+  const rows=visible(kind);
+  const shown=rows.slice(0,ui.limit);
+  $("#tbody").innerHTML=shown.map(({it,i})=>"<tr>"+sp.cols.map(c=>c.render?c.render(it):cellHTML(kind,it,i,c)).join("")+
+    `<td><button class="rbtn" data-reset="${i}" title="Reset this row to the original values">reset</button></td></tr>`).join("")||`<tr><td class="empty">No matches.</td></tr>`;
+  $("#foot").innerHTML=esc(shown.length+" of "+rows.length+" matching ("+F.items.length+" total) "+sp.noun+" displayed. Sorting uses current (edited) values. Floats need a decimal point; the editor adds “.0” automatically. ")+(rows.length>shown.length?`<button id="more">Show ${Math.min(300,rows.length-shown.length)} more</button>`:"");
+}
+function stat(k){const F=files[k];if(!F)return{n:0,bad:0};const a=allFields(k);return{n:a.filter(x=>changed(x.f)).length,bad:a.filter(x=>!valid(x.f)).length};}
+function renderStatus(){
+  let h="",total=0;
+  for(const k of KINDS){const F=files[k];if(!F)continue;const{n,bad}=stat(k);total+=n;
+    h+=`<span class="pill ok">${esc(F.name)}: ${F.items.length}${n?` · ${n} edited`:""}${bad?` · ${bad} invalid`:""}</span>`;}
+  for(const k of LOOKUPS){const F=files[k];if(F)h+=`<span class="pill" title="Used only to show English names">${esc(F.name)}: lookup</span>`;}
+  $("#pills").innerHTML=h;
+  const F=files[ui.tab];
+  $("#btn-dl").disabled=!F;$("#btn-dl").textContent=F?(F.multi?"Download edited battle files (.zip)":"Download "+F.name):"Download";
+  $("#btn-dl-all").disabled=!total;$("#btn-changes").disabled=!KINDS.some(k=>files[k]);
+  $("#tabs").querySelectorAll("button").forEach(b=>{const n=stat(b.dataset.k).n;b.firstElementChild.textContent=n?" ●":"";});
+}
+function renderAll(){
+  const any=KINDS.some(k=>files[k]);$("#drop").hidden=!!any;$("#app").hidden=!any;
+  if(!any)return;
+  if(!files[ui.tab])ui.tab=KINDS.find(k=>files[k]);
+  $("#tabs").innerHTML=KINDS.map(k=>`<button data-k="${k}" class="${k===ui.tab?"on":""}"${files[k]?"":" disabled"}>${SPECS[k].label}<span style="color:var(--chg-line)"></span></button>`).join("");
+  renderTools();renderTable();renderStatus();
+}
+
+/* ---------- events ---------- */
+$("#tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-k]");if(!b||b.disabled)return;ui.tab=b.dataset.k;ui.q="";ui.limit=300;renderAll();});
+$("#tbody").addEventListener("input",e=>{
+  const t=e.target;if(t.dataset.i===undefined)return;
+  const kind=ui.tab,it=files[kind].items[+t.dataset.i],f=it.f[t.dataset.k][+t.dataset.j];
+  f.val=t.value;
+  t.classList.toggle("chg",changed(f));t.classList.toggle("bad",!valid(f));
+  if(f.type==="state"){const c=t.parentElement.querySelector("[data-chip]");if(c)c.innerHTML=chips("eff",f.val);}
+  else if(["skills","mapsk","equip"].includes(t.dataset.k)){const c=t.closest("td").querySelector("[data-chip]");if(c)c.innerHTML=chips(t.dataset.k,f.val);}
+  saveDraft(kind);renderStatus();
+});
+$("#tbody").addEventListener("click",e=>{
+  const r=e.target.closest("[data-reset]");if(!r)return;
+  const it=files[ui.tab].items[+r.dataset.reset];for(const k in it.f)it.f[k].forEach(f=>f.val=f.orig);
+  saveDraft(ui.tab);renderTable();renderStatus();
+});
+$("#thead").addEventListener("click",e=>{
+  const th=e.target.closest("th[data-c]");if(!th)return;const c=+th.dataset.c,s=ui.sort[ui.tab];
+  ui.sort[ui.tab]=s&&s.c===c?(s.d===1?{c,d:-1}:null):{c,d:1};renderTable();
+});
+$("#tools").addEventListener("input",e=>{if(e.target.id==="q"){ui.q=e.target.value;ui.limit=300;renderTable();}});
+$("#foot").addEventListener("click",e=>{if(e.target.id==="more"){ui.limit+=300;renderTable();}});
+$("#tools").addEventListener("change",e=>{
+  if(e.target.dataset.flt!==undefined){(ui.f[ui.tab]=ui.f[ui.tab]||[])[+e.target.dataset.flt]=e.target.value;ui.limit=300;renderTable();}
+});
+$("#tools").addEventListener("click",e=>{
+  if(e.target.id!=="b-go")return;
+  const key=$("#b-col").value,op=$("#b-op").value,v=parseFloat($("#b-val").value);
+  if(Number.isNaN(v)){note("Bulk value must be a number.",true);return;}
+  const rows=visible(ui.tab);let n=0;
+  for(const{it}of rows)for(const f of it.f[key]){
+    const pct=f.val.trim().endsWith("%"),cur=parseFloat(f.val);if(Number.isNaN(cur))continue;
+    let r=op==="mul"?cur*v:op==="add"?cur+v:v;
+    r=f.type==="int"?Math.round(r):Math.round(r*100)/100;
+    f.val=String(r)+(pct?"%":"");n++;
+  }
+  note("Bulk edit changed "+n+" value"+(n===1?"":"s")+" in "+rows.length+" visible rows. Use “reset” on a row to undo.");
+  saveDraft(ui.tab);renderTable();renderStatus();
+});
+
+function makeZip(entries){
+  const te=new TextEncoder(),parts=[],cen=[];let off=0;
+  const tbl=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;tbl[n]=c>>>0;}
+  const crc=d=>{let c=0xFFFFFFFF;for(let i=0;i<d.length;i++)c=tbl[(c^d[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0;};
+  const u16=v=>[v&255,(v>>8)&255],u32=v=>[v&255,(v>>8)&255,(v>>16)&255,(v>>>24)&255];
+  for(const e of entries){
+    const nm=te.encode(e.name),d=te.encode(e.text),c=crc(d);
+    const lh=new Uint8Array([0x50,0x4b,3,4,...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(c),...u32(d.length),...u32(d.length),...u16(nm.length),...u16(0)]);
+    parts.push(lh,nm,d);
+    cen.push(new Uint8Array([0x50,0x4b,1,2,...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(c),...u32(d.length),...u32(d.length),...u16(nm.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nm);
+    off+=lh.length+nm.length+d.length;
+  }
+  let cs=0;for(const c of cen)cs+=c.length;
+  const eocd=new Uint8Array([0x50,0x4b,5,6,0,0,0,0,...u16(entries.length),...u16(entries.length),...u32(cs),...u32(off),0,0]);
+  return new Blob([...parts,...cen,eocd],{type:"application/zip"});
+}
+function download(kind){
+  const F=files[kind];if(!F)return false;
+  const bad=allFields(kind).filter(x=>!valid(x.f));
+  if(bad.length){note("Not exported: "+bad.length+" invalid value(s) in "+F.name+" (e.g. "+bad[0].it.id+" › "+bad[0].k+" = “"+bad[0].f.val+"”). Fix the red cells first.",true);return false;}
+  const save=(name,text)=>{const blob=new Blob([text],{type:"text/plain;charset=utf-8"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);};
+  if(F.multi){
+    const idx=F.parts.map((_,pi)=>pi).filter(pi=>allFields(kind).some(x=>x.it.part===pi&&changed(x.f)));
+    if(!idx.length){note("No edited battle files to download.");return false;}
+    const zip=makeZip(idx.map(pi=>({name:F.parts[pi].name,text:exportText(kind,pi)})));
+    const a=document.createElement("a");a.href=URL.createObjectURL(zip);a.download="battleset_edited.zip";document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+    note("Downloaded battleset_edited.zip with "+idx.length+" edited file"+(idx.length>1?"s":"")+". Unzip it over your BattleSet extract folder, then: python rpack.py repack BattleSet.dat <folder> BattleSet_new.dat --hints team.txt");
+    return true;
+  }
+  save(F.name,exportText(kind));
+  note("Downloaded "+F.name+". Put it in your extracted folder, then run: python rpack.py repack Define.dat <folder> Define_new.dat");
+  return true;
+}
+$("#btn-dl").onclick=()=>download(ui.tab);
+$("#btn-dl-all").onclick=()=>{KINDS.filter(k=>files[k]&&stat(k).n).forEach((k,i)=>setTimeout(()=>download(k),i*600));};
+$("#btn-changes").onclick=()=>{
+  let h="";
+  for(const k of KINDS){if(!files[k])continue;
+    const ch=allFields(k).filter(x=>changed(x.f));
+    h+=`<h3 style="margin:12px 0 6px">${esc(files[k].name)} <span class="pill">${ch.length}</span></h3>`;
+    h+=ch.length?"<table><tbody>"+ch.map(x=>`<tr><td><b>${esc(x.it.label||x.it.name||x.it.id)}</b><small>${esc(x.it.file||x.it.id)}</small></td><td>${esc(x.k)}${x.j?" #"+(x.j+1):""}</td><td>${esc(x.f.orig)} → <b>${esc(out(x.f))}</b></td></tr>`).join("")+"</tbody></table>":'<div class="note">No changes.</div>';}
+  $("#dlg-body").innerHTML=h;$("#dlg").showModal();
+};
+$("#dlg-close").onclick=()=>$("#dlg").close();
+$("#btn-theme").onclick=()=>{const r=document.documentElement;const dark=getComputedStyle(r).getPropertyValue("--bg").trim()==="#12151b";r.dataset.theme=dark?"light":"dark";};
+
+async function ingest(list){
+  let n=0,skipped=[];
+  for(const f of list){try{const t=await f.text();if(loadText(f.name,t))n++;else skipped.push(f.name);}catch(e){skipped.push(f.name+" (unreadable)");}}
+  if(skipped.length&&!n)note("Skipped (not a supported file): "+skipped.join(", "),true);else if(skipped.length)note(skipped.length+" other file"+(skipped.length>1?"s":"")+" ignored.");
+  if(n)renderAll();
+}
+$("#pick").addEventListener("change",e=>{ingest([...e.target.files]);e.target.value="";});
+const drop=$("#drop");
+for(const t of["dragenter","dragover"])window.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over");});
+for(const t of["dragleave","drop"])window.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over");});
+window.addEventListener("drop",e=>{ingest([...e.dataTransfer.files]);});
+window.__test={files,ui,exportText,loadText,renderAll,makeZip};
+</script>
+</body>
+</html>
