@@ -4,7 +4,7 @@ Python script and web GUI done by Claude.
 
 Unpack the game's data files, edit units / skills / income / items / enemy battles in a simple web page, and pack them back so the game loads them.
 
-Tested against Steam v1.03c1 of *Eiyu Senki Gold* (Eiyuu\*Senki GOLD: A New Conquest). This is an unofficial fan tool. Always keep backups of the original files.
+Tested against Steam v1.03c1 of *Eiyu*Senki Gold* (Eiyuu\*Senki GOLD: A New Conquest). This is an unofficial fan tool. Always keep backups of the original files.
 
 ## What's in the kit
 
